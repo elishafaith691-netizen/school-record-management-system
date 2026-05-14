@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start -p $PORT"
-    "lint": "eslint",
-    "seed": "tsx scripts/seed.ts",
-    "fix-demo-auth": "tsx scripts/align-demo-auth.ts",
-    "fix-sqlite": "npm rebuild better-sqlite3"
-  },
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start -p $PORT",
+  "lint": "eslint",
+  "seed": "tsx scripts/seed.ts",
+  "fix-demo-auth": "tsx scripts/align-demo-auth.ts",
+  "fix-sqlite": "npm rebuild better-sqlite3"
+},
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",

@@ -109,7 +109,7 @@ export default async function DashboardPage() {
       .prepare(
         `SELECT COUNT(*) AS count
          FROM enrollments e JOIN courses c ON c.id = e.course_id
-         WHERE c.teacher_id = ?`,
+         WHERE COALESCE(e.assigned_teacher_id, c.teacher_id) = ?`,
       )
       .all(session.user.id) as { count: number }[];
     const [{ count: myGrades }] = db
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
          FROM grades g
          JOIN enrollments e ON e.id = g.enrollment_id
          JOIN courses c ON c.id = e.course_id
-         WHERE c.teacher_id = ?`,
+         WHERE COALESCE(e.assigned_teacher_id, c.teacher_id) = ?`,
       )
       .all(session.user.id) as { count: number }[];
     primaryStats = [

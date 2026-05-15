@@ -18,7 +18,7 @@ export async function GET() {
        FROM enrollments e
        JOIN courses c ON c.id = e.course_id
        JOIN users u ON u.id = e.student_id
-       WHERE c.teacher_id = ?
+       WHERE COALESCE(e.assigned_teacher_id, c.teacher_id) = ?
        ORDER BY c.code, u.name`,
     )
     .all(user.id);

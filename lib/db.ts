@@ -41,6 +41,7 @@ export function getDb(): Database.Database {
       id TEXT PRIMARY KEY,
       student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+      assigned_teacher_id TEXT REFERENCES users(id) ON DELETE SET NULL,
       enrolled_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(student_id, course_id)
     );
@@ -63,6 +64,22 @@ export function getDb(): Database.Database {
   if (!courseColumns.some((c) => c.name === "program")) {
     instance.exec(
       `ALTER TABLE courses ADD COLUMN program TEXT NOT NULL DEFAULT ''`,
+    );
+  }
+
+  const enrollmentColumns = instance
+    .prepare(`PRAGMA table_info(enrollments)`)
+    .all() as { name: string }[];
+  if (!enrollmentColumns.some((c) => c.name === "assigned_teacher_id")) {
+    instance.exec(
+      `ALTER TABLE enrollments ADD COLUMN assigned_teacher_id TEXT REFERENCES users(id) ON DELETE SET NULL`,
+    );
+    instance.exec(
+      `UPDATE enrollments
+       SET assigned_teacher_id = (
+         SELECT teacher_id FROM courses WHERE courses.id = enrollments.course_id
+       )
+       WHERE assigned_teacher_id IS NULL`,
     );
   }
 

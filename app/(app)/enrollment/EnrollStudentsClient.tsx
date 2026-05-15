@@ -16,14 +16,19 @@ type Course = {
   title: string;
   term: string;
   program: string;
+  teacher_id: string;
+  teacher_name: string;
 };
+type Teacher = { id: string; name: string; email: string };
 
 export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
   const [students, setStudents] = useState<Student[] | null>(null);
   const [courses, setCourses] = useState<Course[] | null>(null);
+  const [teachers, setTeachers] = useState<Teacher[] | null>(null);
   const [studentId, setStudentId] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
   const [courseId, setCourseId] = useState("");
+  const [teacherId, setTeacherId] = useState("");
   const [programFilter, setProgramFilter] = useState<CourseProgram>("BSIT");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +43,17 @@ export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [sRes, cRes] = await Promise.all([
+      const [sRes, cRes, tRes] = await Promise.all([
         fetch("/api/students"),
         fetch("/api/courses"),
+        fetch("/api/teachers"),
       ]);
       const sJson = (await sRes.json()) as {
-        students?: { id: string; name: string; email: string }[];
+        students?: Student[];
         error?: string;
       };
       const cJson = (await cRes.json()) as { courses?: Course[]; error?: string };
+      const tJson = (await tRes.json()) as { teachers?: Teacher[]; error?: string };
       if (cancelled) return;
       if (!sRes.ok) {
         setError(sJson.error ?? "Failed to load students");
@@ -56,15 +63,23 @@ export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
         setError(cJson.error ?? "Failed to load courses");
         return;
       }
+      if (!tRes.ok) {
+        setError(tJson.error ?? "Failed to load teachers");
+        return;
+      }
       const sl = sJson.students ?? [];
       const cl = (cJson.courses ?? []) as Course[];
+      const tl = tJson.teachers ?? [];
       setStudents(sl);
       setCourses(cl);
+      setTeachers(tl);
       if (sl[0]) setStudentId(sl[0].id);
       const prog =
         COURSE_PROGRAMS.find((p) => cl.some((c) => c.program === p)) ?? "BSIT";
+      const selectedCourse = cl.find((c) => c.program === prog);
       setProgramFilter(prog);
-      setCourseId(cl.find((c) => c.program === prog)?.id ?? "");
+      setCourseId(selectedCourse?.id ?? "");
+      setTeacherId(selectedCourse?.teacher_id ?? tl[0]?.id ?? "");
     })();
     return () => {
       cancelled = true;
@@ -145,10 +160,14 @@ export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
       setError("No course for this program. Add a course with this program under Courses.");
       return;
     }
+    if (!teacherId) {
+      setError("Choose a handle teacher for this enrollment.");
+      return;
+    }
     const res = await fetch("/api/enrollments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId, courseId }),
+      body: JSON.stringify({ studentId, courseId, teacherId }),
     });
     const data = (await res.json()) as { error?: string };
     if (!res.ok) {
@@ -156,6 +175,14 @@ export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
       return;
     }
     setMessage("Student enrolled.");
+  }
+
+  function chooseCourse(nextCourseId: string) {
+    setCourseId(nextCourseId);
+    const selectedCourse = courses?.find((course) => course.id === nextCourseId);
+    if (selectedCourse) {
+      setTeacherId(selectedCourse.teacher_id);
+    }
   }
 
   const filteredStudents = useMemo(() => {
@@ -168,7 +195,12 @@ export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
     );
   }, [studentSearch, students]);
 
-  if (error && (!students || !courses)) {
+  const filteredCourses = useMemo(
+    () => (courses ?? []).filter((course) => course.program === programFilter),
+    [courses, programFilter],
+  );
+
+  if (error && (!students || !courses || !teachers)) {
     return (
       <div>
         <div className="mb-3">
@@ -178,7 +210,7 @@ export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
       </div>
     );
   }
-  if (!students || !courses) {
+  if (!students || !courses || !teachers) {
     return (
       <div>
         <div className="mb-3">
@@ -243,8 +275,10 @@ export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
             value={programFilter}
             onChange={(e) => {
               const p = e.target.value as CourseProgram;
+              const nextCourse = courses.find((c) => c.program === p);
               setProgramFilter(p);
-              setCourseId(courses.find((c) => c.program === p)?.id ?? "");
+              setCourseId(nextCourse?.id ?? "");
+              setTeacherId(nextCourse?.teacher_id ?? teachers[0]?.id ?? "");
             }}
           >
             {COURSE_PROGRAMS.map((p) => (
@@ -254,11 +288,46 @@ export function EnrollStudentsClient({ viewerRole }: { viewerRole: Role }) {
             ))}
           </select>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700" htmlFor="course">
+            Course
+          </label>
+          <select
+            id="course"
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            value={courseId}
+            onChange={(e) => chooseCourse(e.target.value)}
+          >
+            {filteredCourses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code} - {c.title}
+                {c.term ? ` (${c.term})` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700" htmlFor="teacher">
+            Handle teacher
+          </label>
+          <select
+            id="teacher"
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            value={teacherId}
+            onChange={(e) => setTeacherId(e.target.value)}
+          >
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.email})
+              </option>
+            ))}
+          </select>
+        </div>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         {message ? <p className="text-sm text-green-700">{message}</p> : null}
         <button
           type="submit"
-          disabled={!studentId}
+          disabled={!studentId || !courseId || !teacherId}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Enroll

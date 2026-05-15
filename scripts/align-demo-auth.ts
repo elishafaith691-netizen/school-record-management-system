@@ -61,6 +61,23 @@ const userColumns = db
   .all() as { name: string }[];
 const hasProgramId = userColumns.some((c) => c.name === "program_id");
 
+const enrollmentColumns = db
+  .prepare(`PRAGMA table_info(enrollments)`)
+  .all() as { name: string }[];
+if (!enrollmentColumns.some((c) => c.name === "assigned_teacher_id")) {
+  db.exec(
+    `ALTER TABLE enrollments ADD COLUMN assigned_teacher_id TEXT REFERENCES users(id) ON DELETE SET NULL`,
+  );
+  db.exec(
+    `UPDATE enrollments
+     SET assigned_teacher_id = (
+       SELECT teacher_id FROM courses WHERE courses.id = enrollments.course_id
+     )
+     WHERE assigned_teacher_id IS NULL`,
+  );
+  console.log("Added enrollment handle teacher column");
+}
+
 const hasRegistrar = db
   .prepare(`SELECT 1 AS ok FROM users WHERE lower(trim(email)) = 'registrar@school.edu'`)
   .get() as { ok: number } | undefined;
@@ -179,12 +196,13 @@ db.prepare(
 );
 
 db.prepare(
-  `INSERT INTO enrollments (id, student_id, course_id)
-   VALUES (?, ?, ?)
+  `INSERT INTO enrollments (id, student_id, course_id, assigned_teacher_id)
+   VALUES (?, ?, ?, ?)
    ON CONFLICT(id) DO UPDATE SET
      student_id = excluded.student_id,
-     course_id = excluded.course_id`,
-).run("e-1", "u-student-1", "c-demo-1");
+     course_id = excluded.course_id,
+     assigned_teacher_id = excluded.assigned_teacher_id`,
+).run("e-1", "u-student-1", "c-demo-1", "u-teacher-1");
 
 db.prepare(
   `INSERT INTO grades (id, enrollment_id, score, letter_grade, term, submitted_by, notes)

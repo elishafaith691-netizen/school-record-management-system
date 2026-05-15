@@ -14,7 +14,7 @@ export function canViewStudent(
       .prepare(
         `SELECT 1 AS ok FROM enrollments e
          JOIN courses c ON c.id = e.course_id
-         WHERE e.student_id = ? AND c.teacher_id = ?
+         WHERE e.student_id = ? AND COALESCE(e.assigned_teacher_id, c.teacher_id) = ?
          LIMIT 1`,
       )
       .get(targetStudentId, viewerId) as { ok: number } | undefined;
@@ -32,7 +32,7 @@ export function teacherOwnsEnrollment(
     .prepare(
       `SELECT 1 AS ok FROM enrollments e
        JOIN courses c ON c.id = e.course_id
-       WHERE e.id = ? AND c.teacher_id = ?
+       WHERE e.id = ? AND COALESCE(e.assigned_teacher_id, c.teacher_id) = ?
        LIMIT 1`,
     )
     .get(enrollmentId, teacherId) as { ok: number } | undefined;

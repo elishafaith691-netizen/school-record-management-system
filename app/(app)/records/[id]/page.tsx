@@ -18,6 +18,8 @@ type Detail = {
     code: string;
     title: string;
     term: string;
+    assigned_teacher_id: string;
+    assigned_teacher_name: string | null;
     enrolled_at: string;
   }[];
   grades: {
@@ -98,6 +100,7 @@ export default function RecordDetailPage() {
               <tr>
                 <th className="px-3 py-2">Course</th>
                 <th className="px-3 py-2">Term</th>
+                <th className="px-3 py-2">Handle teacher</th>
                 <th className="px-3 py-2">Enrolled</th>
               </tr>
             </thead>
@@ -108,6 +111,7 @@ export default function RecordDetailPage() {
                     {e.code} — {e.title}
                   </td>
                   <td className="px-3 py-2">{e.term || "—"}</td>
+                  <td className="px-3 py-2">{e.assigned_teacher_name ?? "—"}</td>
                   <td className="px-3 py-2 text-slate-600">{e.enrolled_at}</td>
                 </tr>
               ))}

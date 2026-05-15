@@ -71,6 +71,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    assigned_teacher_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     enrolled_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(student_id, course_id)
   );
@@ -197,14 +198,17 @@ const en1 = "e-1";
 const en2 = "e-2";
 const en3 = "e-3";
 db.prepare(
-  `INSERT INTO enrollments (id, student_id, course_id) VALUES (?, ?, ?)`,
-).run(en1, "u-student-1", "c-demo-1");
+  `INSERT INTO enrollments (id, student_id, course_id, assigned_teacher_id)
+   VALUES (?, ?, ?, ?)`,
+).run(en1, "u-student-1", "c-demo-1", "u-teacher-1");
 db.prepare(
-  `INSERT INTO enrollments (id, student_id, course_id) VALUES (?, ?, ?)`,
-).run(en2, "u-student-1", "c-demo-2");
+  `INSERT INTO enrollments (id, student_id, course_id, assigned_teacher_id)
+   VALUES (?, ?, ?, ?)`,
+).run(en2, "u-student-1", "c-demo-2", "u-teacher-1");
 db.prepare(
-  `INSERT INTO enrollments (id, student_id, course_id) VALUES (?, ?, ?)`,
-).run(en3, "u-student-2", "c-demo-1");
+  `INSERT INTO enrollments (id, student_id, course_id, assigned_teacher_id)
+   VALUES (?, ?, ?, ?)`,
+).run(en3, "u-student-2", "c-demo-1", "u-teacher-1");
 
 db.prepare(
   `INSERT INTO grades (id, enrollment_id, score, letter_grade, term, submitted_by, notes)

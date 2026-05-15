@@ -46,9 +46,12 @@ export async function GET(
   const enrollments = db
     .prepare(
       `SELECT e.id AS enrollment_id, c.id AS course_id, c.code, c.title, c.term,
+              COALESCE(e.assigned_teacher_id, c.teacher_id) AS assigned_teacher_id,
+              t.name AS assigned_teacher_name,
               e.enrolled_at
        FROM enrollments e
        JOIN courses c ON c.id = e.course_id
+       LEFT JOIN users t ON t.id = COALESCE(e.assigned_teacher_id, c.teacher_id)
        WHERE e.student_id = ?
        ORDER BY e.enrolled_at DESC`,
     )
@@ -58,6 +61,8 @@ export async function GET(
     code: string;
     title: string;
     term: string;
+    assigned_teacher_id: string;
+    assigned_teacher_name: string | null;
     enrolled_at: string;
   }[];
 
